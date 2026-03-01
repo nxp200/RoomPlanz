@@ -217,6 +217,11 @@
   const canvasWrapper = $('#canvas-wrapper');
 
   const userGuideContainer = $('#user-guide-content');
+  const layoutRoot = $('#app');
+  const btnCollapseLeft = $('#btn-collapse-left');
+  const btnCollapseRight = $('#btn-collapse-right');
+  const btnExpandLeft = $('#btn-expand-left');
+  const btnExpandRight = $('#btn-expand-right');
 
   // ---------------------------
   // Initialization
@@ -240,6 +245,13 @@
     injectUserGuide();
 
     // keyboard shortcuts info: handled at document level
+
+    // Restore collapsed panels state
+    try {
+      const s = JSON.parse(localStorage.getItem('roomplanner_panels_v1')||'{}');
+      if (s.leftCollapsed) layoutRoot.classList.add('left-collapsed');
+      if (s.rightCollapsed) layoutRoot.classList.add('right-collapsed');
+    } catch{}
   }
 
   // ---------------------------
@@ -604,10 +616,10 @@
     // Room inputs
     inputRoomW.addEventListener('input', onRoomInput);
     inputRoomH.addEventListener('input', onRoomInput);
-    toggleGrid.addEventListener('change', ()=>{ state.settings.gridVisible = !!toggleGrid.checked; renderGrid(); });
-    gridSpacingSel.addEventListener('change', ()=>{ state.settings.gridSpacingMm = parseIntSafe(gridSpacingSel.value, state.settings.gridSpacingMm); renderGrid(); });
-    snapGridChk.addEventListener('change', ()=>{ state.settings.snapToGrid = !!snapGridChk.checked; });
-    snapRotChk.addEventListener('change', ()=>{ state.settings.snapRotation = !!snapRotChk.checked; });
+    toggleGrid.addEventListener('change', ()=>{ state.settings.gridVisible = !!toggleGrid.checked; renderGrid(); scheduleAutosave(); });
+    gridSpacingSel.addEventListener('change', ()=>{ state.settings.gridSpacingMm = parseIntSafe(gridSpacingSel.value, state.settings.gridSpacingMm); renderGrid(); scheduleAutosave(); });
+    snapGridChk.addEventListener('change', ()=>{ state.settings.snapToGrid = !!snapGridChk.checked; scheduleAutosave(); });
+    snapRotChk.addEventListener('change', ()=>{ state.settings.snapRotation = !!snapRotChk.checked; scheduleAutosave(); });
 
     // Create
     btnAddRect.addEventListener('click', ()=> addObject('rect'));
@@ -667,6 +679,36 @@
     btnExportJpeg.addEventListener('click', doExportJPEG);
 
     // Numeric input arrow adjustments disabled to avoid keyboard interference
+
+    // Panel collapse/expand
+    if (btnCollapseLeft){ btnCollapseLeft.addEventListener('click', ()=> togglePanel('left', true)); }
+    if (btnCollapseRight){ btnCollapseRight.addEventListener('click', ()=> togglePanel('right', true)); }
+    if (btnExpandLeft){ btnExpandLeft.addEventListener('click', ()=> togglePanel('left', false)); }
+    if (btnExpandRight){ btnExpandRight.addEventListener('click', ()=> togglePanel('right', false)); }
+  }
+
+  function savePanelState(){
+    try {
+      const s = {
+        leftCollapsed: layoutRoot.classList.contains('left-collapsed'),
+        rightCollapsed: layoutRoot.classList.contains('right-collapsed'),
+      };
+      localStorage.setItem('roomplanner_panels_v1', JSON.stringify(s));
+    } catch{}
+  }
+
+  function togglePanel(side, collapse){
+    if (!layoutRoot) return;
+    if (side === 'left'){
+      layoutRoot.classList.toggle('left-collapsed', !!collapse);
+      if (btnExpandLeft) btnExpandLeft.setAttribute('aria-expanded', String(!collapse));
+      if (btnCollapseLeft) btnCollapseLeft.setAttribute('aria-expanded', String(!collapse));
+    } else if (side === 'right'){
+      layoutRoot.classList.toggle('right-collapsed', !!collapse);
+      if (btnExpandRight) btnExpandRight.setAttribute('aria-expanded', String(!collapse));
+      if (btnCollapseRight) btnCollapseRight.setAttribute('aria-expanded', String(!collapse));
+    }
+    savePanelState();
   }
 
   function onRoomInput(){
@@ -739,6 +781,7 @@
       ensureInsideRoom(obj, state.room);
       renderObjects();
       updatePropsPanel();
+      scheduleAutosave();
       return; // do not start a drag interaction or capture pointer
     }
     state.interaction.pointerId = e.pointerId;
@@ -1053,6 +1096,12 @@
       schemaVersion: SCHEMA_VERSION,
       room: deepClone(state.room),
       objects: deepClone(state.objects),
+      settings: {
+        gridVisible: !!state.settings.gridVisible,
+        gridSpacingMm: state.settings.gridSpacingMm,
+        snapToGrid: !!state.settings.snapToGrid,
+        snapRotation: !!state.settings.snapRotation,
+      },
     };
   }
 
@@ -1079,6 +1128,12 @@
       if (errs.length) return;
       state.room = deepClone(model.room);
       state.objects = deepClone(model.objects);
+      if (model.settings){
+        state.settings.gridVisible = !!model.settings.gridVisible;
+        if (Number.isInteger(model.settings.gridSpacingMm)) state.settings.gridSpacingMm = model.settings.gridSpacingMm;
+        if (typeof model.settings.snapToGrid === 'boolean') state.settings.snapToGrid = model.settings.snapToGrid;
+        if (typeof model.settings.snapRotation === 'boolean') state.settings.snapRotation = model.settings.snapRotation;
+      }
       state.selectionId = null;
       let maxId = 0; for (const o of state.objects){ if (o.id>maxId) maxId=o.id; }
       state.nextId = maxId+1;
@@ -1112,6 +1167,13 @@
         if (!Number.isInteger(o.style.labelPx) || o.style.labelPx < 1) errs.push(`Object ${i}: label size invalid`);
       }
     }
+    // Optional settings validation
+    if (model.settings){
+      if (typeof model.settings.gridVisible !== 'boolean') errs.push('settings.gridVisible must be boolean.');
+      if (!Number.isInteger(model.settings.gridSpacingMm)) errs.push('settings.gridSpacingMm must be integer.');
+      if (typeof model.settings.snapToGrid !== 'boolean') errs.push('settings.snapToGrid must be boolean.');
+      if (typeof model.settings.snapRotation !== 'boolean') errs.push('settings.snapRotation must be boolean.');
+    }
     return errs;
   }
 
@@ -1134,6 +1196,17 @@
         // apply model
         state.room = deepClone(model.room);
         state.objects = deepClone(model.objects);
+        if (model.settings){
+          state.settings.gridVisible = !!model.settings.gridVisible;
+          if (Number.isInteger(model.settings.gridSpacingMm)) state.settings.gridSpacingMm = model.settings.gridSpacingMm;
+          if (typeof model.settings.snapToGrid === 'boolean') state.settings.snapToGrid = model.settings.snapToGrid;
+          if (typeof model.settings.snapRotation === 'boolean') state.settings.snapRotation = model.settings.snapRotation;
+          // Sync UI controls with imported settings
+          toggleGrid.checked = state.settings.gridVisible;
+          gridSpacingSel.value = String(state.settings.gridSpacingMm);
+          snapGridChk.checked = state.settings.snapToGrid;
+          snapRotChk.checked = state.settings.snapRotation;
+        }
         // Backward compatibility: ensure style.labelPx exists
         for (const o of state.objects){
           if (!o.style) o.style = deepClone(DEFAULT_STYLE);

@@ -40,7 +40,38 @@ body{
   grid-template-columns: 320px 1fr 360px;
   grid-template-rows: 1fr;
   min-height: calc(100vh - 52px);
+  position: relative;
 }
+/* Explicit placement so auto-placement doesn't shift items when a panel is hidden */
+#input-panel{ grid-column: 1; }
+#workspace{ grid-column: 2; }
+#properties-panel{ grid-column: 3; }
+/* Collapsed states adjust grid columns */
+.layout.left-collapsed{ grid-template-columns: 0 1fr 360px; }
+.layout.right-collapsed{ grid-template-columns: 320px 1fr 0; }
+.layout.left-collapsed.right-collapsed{ grid-template-columns: 0 1fr 0; }
+
+/* Hide panels when collapsed */
+.left-collapsed #input-panel{ display:none; }
+.right-collapsed #properties-panel{ display:none; }
+
+/* Collapse buttons inside panels */
+.collapse-btn{ position: sticky; top: .25rem; z-index: 3; border:1px solid var(--border); background:#1f2937; color:var(--text); border-radius:6px; padding:.15rem .35rem; float: right; }
+.collapse-btn.left{ margin-left:auto; }
+.collapse-btn.right{ float:left; }
+.collapse-btn:hover{ border-color: var(--accent); }
+
+/* Expand tabs shown only when collapsed */
+.expand-tab{ position:absolute; top:8px; z-index:4; display:none; background:#1f2937; color:var(--text); border:1px solid var(--border); border-radius:6px; padding:.35rem .45rem; cursor:pointer; }
+.expand-left{ left: 4px; }
+.expand-right{ right: 4px; }
+.layout.left-collapsed .expand-left{ display:block; }
+.layout.right-collapsed .expand-right{ display:block; }
+.expand-tab:hover{ border-color: var(--accent); }
+
+/* Ensure expand tabs overlay the canvas area without affecting grid */
+.workspace-expands{ position:absolute; inset:0; pointer-events: none; z-index: 4; grid-column: 2; }
+.workspace-expands .expand-tab{ pointer-events: auto; }
 .panel{
   background: var(--panel);
   border-right: 1px solid var(--border);

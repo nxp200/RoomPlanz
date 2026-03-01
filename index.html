@@ -22,6 +22,7 @@
 
   <main id="app" class="layout" role="main">
     <section id="input-panel" class="panel left" aria-label="Input Panel">
+      <button id="btn-collapse-left" class="collapse-btn left" type="button" aria-controls="input-panel" aria-expanded="true" title="Hide left panel">⟨</button>
       <h2>Room</h2>
       <form id="room-form" novalidate>
         <label for="room-width">Width (mm)</label>
@@ -71,7 +72,6 @@
         </details>
       </div>
     </section>
-
     <section id="workspace" class="center" aria-label="Canvas Workspace">
       <div id="canvas-wrapper" class="canvas-wrapper" tabindex="0" aria-label="Workspace canvas" aria-live="polite">
         <svg id="svg-root" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" role="img" aria-label="Room layout">
@@ -88,9 +88,15 @@
           </g>
         </svg>
       </div>
+      <!-- Expand tabs overlayed on the workspace so they don't affect grid layout -->
+      <div class="workspace-expands" aria-hidden="false">
+        <button id="btn-expand-left" class="expand-tab expand-left" type="button" aria-controls="input-panel" aria-expanded="true" title="Show left panel">›</button>
+        <button id="btn-expand-right" class="expand-tab expand-right" type="button" aria-controls="properties-panel" aria-expanded="true" title="Show right panel">‹</button>
+      </div>
     </section>
 
     <section id="properties-panel" class="panel right" aria-label="Properties & Export Panel">
+      <button id="btn-collapse-right" class="collapse-btn right" type="button" aria-controls="properties-panel" aria-expanded="true" title="Hide right panel">⟩</button>
       <h2>Properties</h2>
       <form id="props-form" novalidate>
         <div class="notice" id="no-selection">Select an object to edit its properties.</div>
