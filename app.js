@@ -17,7 +17,7 @@
   const MAX_ROOM_MM = 50000;
   const MIN_SIZE_MM = 1; // Strictly positive
   const DEFAULT_ROOM = { widthMm: 8000, heightMm: 6000 };
-  const DEFAULT_STYLE = { fill: '#7ec8e3', borderColor: '#144663', borderMm: 10, showLabel: true, labelPx: 80 };
+  const DEFAULT_STYLE = { fill: '#7ec8e3', borderColor: '#144663', borderMm: 10, showLabel: true, labelPx: 80, cornerMm: 0 };
   const ZOOM_MIN = 0.1; // 10%
   const ZOOM_MAX = 5.0; // 500%
   const ZOOM_STEP = 1.1; // multiplicative
@@ -186,6 +186,7 @@
   const propThick = $('#prop-thick');
   const propLabel = $('#prop-label');
   const propLabelSize = $('#prop-label-size');
+  const propCorner = $('#prop-corner');
   const errPW = $('#prop-width-err');
   const errPH = $('#prop-height-err');
   const errPR = $('#prop-radius-err');
@@ -194,6 +195,7 @@
   const errProt = $('#prop-rot-err');
   const errPTh = $('#prop-thick-err');
   const errPLS = $('#prop-label-size-err');
+  const errPCorner = $('#prop-corner-err');
 
   const btnDuplicate = $('#btn-duplicate');
   const btnDelete = $('#btn-delete');
@@ -328,7 +330,12 @@
       shape.setAttribute('y', String(-Math.round(h/2)));
       shape.setAttribute('width', String(w));
       shape.setAttribute('height', String(h));
-      shape.setAttribute('rx', '0');
+      // Clamp corner radius to half of the smaller side
+      const requested = Math.max(0, Number(obj.style?.cornerMm) || 0);
+      const maxRx = Math.floor(Math.min(w, h) / 2);
+      const rx = Math.min(requested, maxRx);
+      shape.setAttribute('rx', String(rx));
+      shape.setAttribute('ry', String(rx));
     }
 
     g.appendChild(shape);
@@ -489,11 +496,16 @@
       $('#dim-rect').classList.add('hidden');
       $('#dim-circle').classList.remove('hidden');
       propRadius.value = String(obj.radiusMm);
+      // Corner radius not applicable for circles
+      $('#corner-rect').classList.add('hidden');
     } else {
       $('#dim-rect').classList.remove('hidden');
       $('#dim-circle').classList.add('hidden');
       propWidth.value = String(obj.type==='square'?obj.sizeMm:obj.widthMm);
       propHeight.value = String(obj.type==='square'?obj.sizeMm:obj.heightMm);
+      // Show corner radius control for rect/square
+      $('#corner-rect').classList.remove('hidden');
+      if (propCorner) propCorner.value = String(Number.isInteger(obj.style?.cornerMm) ? obj.style.cornerMm : 0);
     }
 
     propX.value = String(obj.xMm);
@@ -540,7 +552,8 @@
 
     // Clear errors
     errPW.textContent = errPH.textContent = errPR.textContent = '';
-    errPX.textContent = errPY.textContent = errProt.textContent = errPTh.textContent = errPLS.textContent = '';
+    errPX.textContent = errPY.textContent = errProt.textContent = errPTh.textContent = errPLS.textContent = (errPCorner ? '' : '');
+    if (errPCorner) errPCorner.textContent = '';
 
     // Dimensions
     if (obj.type === 'circle'){
@@ -596,6 +609,20 @@
     const thickStr = propThick.value.trim();
     if (!/^\d+$/.test(thickStr)) { errPTh.textContent = 'Numbers only'; }
     else { obj.style.borderMm = Math.max(0, parseInt(thickStr,10)); }
+    // Corner radius for rect/square only
+    if (obj.type !== 'circle' && propCorner){
+      const cStr = propCorner.value.trim();
+      if (!/^\d+$/.test(cStr)) { if (errPCorner) errPCorner.textContent = 'Numbers only'; }
+      else {
+        obj.style.cornerMm = Math.max(0, parseInt(cStr,10));
+        // Clamp to half of the smaller side
+        const wNow = obj.type==='square' ? obj.sizeMm : obj.widthMm;
+        const hNow = obj.type==='square' ? obj.sizeMm : obj.heightMm;
+        const maxRxNow = Math.floor(Math.min(wNow, hNow) / 2);
+        obj.style.cornerMm = Math.min(obj.style.cornerMm, maxRxNow);
+        propCorner.value = String(obj.style.cornerMm);
+      }
+    }
     obj.style.showLabel = !!propLabel.checked;
     const labelStr = propLabelSize.value.trim();
     if (!/^\d+$/.test(labelStr)) { errPLS.textContent = 'Numbers only'; }
@@ -1166,6 +1193,9 @@
       if (o.style && o.style.labelPx != null){
         if (!Number.isInteger(o.style.labelPx) || o.style.labelPx < 1) errs.push(`Object ${i}: label size invalid`);
       }
+      if (o.style && o.style.cornerMm != null){
+        if (!Number.isInteger(o.style.cornerMm) || o.style.cornerMm < 0) errs.push(`Object ${i}: corner radius invalid`);
+      }
     }
     // Optional settings validation
     if (model.settings){
@@ -1211,6 +1241,7 @@
         for (const o of state.objects){
           if (!o.style) o.style = deepClone(DEFAULT_STYLE);
           if (!Number.isInteger(o.style.labelPx)) o.style.labelPx = DEFAULT_STYLE.labelPx;
+          if (!Number.isInteger(o.style.cornerMm)) o.style.cornerMm = DEFAULT_STYLE.cornerMm;
         }
         state.selectionId = null;
         // recompute nextId

@@ -55,10 +55,25 @@
 
       <h2>Create</h2>
       <form id="create-form" class="create" novalidate>
-        <div class="create-row">
-          <button id="add-rect" type="button">Rectangle</button>
-          <button id="add-square" type="button">Square</button>
-          <button id="add-circle" type="button">Circle</button>
+        <div class="create-list">
+          <button id="add-rect" type="button" class="create-btn">
+            <svg class="shape-icon" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="3" y="6" width="18" height="12" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2" />
+            </svg>
+            <span>Rectangle</span>
+          </button>
+          <button id="add-square" type="button" class="create-btn">
+            <svg class="shape-icon" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="5" y="5" width="14" height="14" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2" />
+            </svg>
+            <span>Square</span>
+          </button>
+          <button id="add-circle" type="button" class="create-btn">
+            <svg class="shape-icon" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2" />
+            </svg>
+            <span>Circle</span>
+          </button>
         </div>
       </form>
 
@@ -148,6 +163,12 @@
           <label for="prop-thick">Border thickness (mm)</label>
           <input id="prop-thick" type="text" inputmode="numeric" pattern="^\\d+$" aria-describedby="prop-thick-err" />
           <div class="err" id="prop-thick-err" role="alert" aria-live="polite"></div>
+
+          <div id="corner-rect">
+            <label for="prop-corner">Corner radius (mm)</label>
+            <input id="prop-corner" type="text" inputmode="numeric" pattern="^\\d+$" aria-describedby="prop-corner-err" />
+            <div class="err" id="prop-corner-err" role="alert" aria-live="polite"></div>
+          </div>
 
           <label for="prop-label-size">Label text size (px)</label>
           <input id="prop-label-size" type="text" inputmode="numeric" pattern="^\\d+$" aria-describedby="prop-label-size-err" />
