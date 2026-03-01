@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RoomPlanner — Offline 2D Layout (mm-precise, SVG)</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header" role="banner">
+    <h1 tabindex="0">RoomPlanner</h1>
+    <div class="header-actions" role="toolbar" aria-label="Global actions">
+      <button id="btn-fit" title="Fit to room">Fit</button>
+      <button id="btn-reset-view" title="Reset view">Reset</button>
+      <div class="zoom-controls">
+        <button id="zoom-out" title="Zoom out">−</button>
+        <output id="zoom-level" aria-live="polite">100%</output>
+        <button id="zoom-in" title="Zoom in">+</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="app" class="layout" role="main">
+    <section id="input-panel" class="panel left" aria-label="Input Panel">
+      <h2>Room</h2>
+      <form id="room-form" novalidate>
+        <label for="room-width">Width (mm)</label>
+        <input id="room-width" name="roomWidth" type="text" inputmode="numeric" pattern="^\\d+$" aria-describedby="room-width-err" required />
+        <div class="err" id="room-width-err" role="alert" aria-live="polite"></div>
+
+        <label for="room-height">Height (mm)</label>
+        <input id="room-height" name="roomHeight" type="text" inputmode="numeric" pattern="^\\d+$" aria-describedby="room-height-err" required />
+        <div class="err" id="room-height-err" role="alert" aria-live="polite"></div>
+
+        <div class="form-row">
+          <label><input type="checkbox" id="toggle-grid" /> Show grid</label>
+        </div>
+        <div class="form-row">
+          <label for="grid-spacing">Grid spacing</label>
+          <select id="grid-spacing">
+            <option value="100">100 mm</option>
+            <option value="250">250 mm</option>
+            <option value="500">500 mm</option>
+            <option value="1000">1000 mm</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label><input type="checkbox" id="snap-grid" /> Snap to grid</label>
+        </div>
+        <div class="form-row">
+          <label><input type="checkbox" id="snap-rotation" /> Snap rotation (90°)</label>
+        </div>
+      </form>
+
+      <h2>Create</h2>
+      <form id="create-form" class="create" novalidate>
+        <div class="create-row">
+          <button id="add-rect" type="button">Rectangle</button>
+          <button id="add-square" type="button">Square</button>
+          <button id="add-circle" type="button">Circle</button>
+        </div>
+      </form>
+
+      <div class="help">
+        <details>
+          <summary>Tips</summary>
+          <ul>
+            <li>Drag background to pan. Scroll (two-finger) to pan; hold Cmd/Ctrl while scrolling to zoom. Rotate via the ↺/↻ buttons above a selected object.</li>
+            <li>Click an object to select. Drag to move. Handles resize/rotate.</li>
+          </ul>
+        </details>
+      </div>
+    </section>
+
+    <section id="workspace" class="center" aria-label="Canvas Workspace">
+      <div id="canvas-wrapper" class="canvas-wrapper" tabindex="0" aria-label="Workspace canvas" aria-live="polite">
+        <svg id="svg-root" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" role="img" aria-label="Room layout">
+          <defs>
+            <pattern id="grid-pattern" patternUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
+              <path d="M 100 0 L 0 0 0 100" fill="none" stroke="#d0d0d0" stroke-width="0.5" shape-rendering="crispEdges" />
+            </pattern>
+          </defs>
+          <g id="viewport" transform="translate(0,0) scale(1)">
+            <g id="room-layer"></g>
+            <g id="grid-layer" visibility="hidden"></g>
+            <g id="object-layer" stroke-linejoin="round" stroke-linecap="round"></g>
+            <g id="overlay-layer"></g>
+          </g>
+        </svg>
+      </div>
+    </section>
+
+    <section id="properties-panel" class="panel right" aria-label="Properties & Export Panel">
+      <h2>Properties</h2>
+      <form id="props-form" novalidate>
+        <div class="notice" id="no-selection">Select an object to edit its properties.</div>
+        <div id="props-fields" class="hidden">
+          <label for="prop-name">Name</label>
+          <input id="prop-name" type="text" />
+
+          <label for="prop-type">Shape</label>
+          <select id="prop-type">
+            <option value="rect">Rectangle</option>
+            <option value="square">Square</option>
+            <option value="circle">Circle</option>
+          </select>
+
+          <div id="dim-rect">
+            <label for="prop-width">Width (mm)</label>
+            <input id="prop-width" type="text" inputmode="numeric" pattern="^\\d+$" aria-describedby="prop-width-err" />
+            <div class="err" id="prop-width-err" role="alert" aria-live="polite"></div>
+
+            <label for="prop-height">Height (mm)</label>
+            <input id="prop-height" type="text" inputmode="numeric" pattern="^\\d+$" aria-describedby="prop-height-err" />
+            <div class="err" id="prop-height-err" role="alert" aria-live="polite"></div>
+          </div>
+
+          <div id="dim-circle" class="hidden">
+            <label for="prop-radius">Radius (mm)</label>
+            <input id="prop-radius" type="text" inputmode="numeric" pattern="^\\d+$" aria-describedby="prop-radius-err" />
+            <div class="err" id="prop-radius-err" role="alert" aria-live="polite"></div>
+          </div>
+
+          <label for="prop-x">Center X (mm)</label>
+          <input id="prop-x" type="text" inputmode="numeric" pattern="^\\d+$" aria-describedby="prop-x-err" />
+          <div class="err" id="prop-x-err" role="alert" aria-live="polite"></div>
+
+          <label for="prop-y">Center Y (mm)</label>
+          <input id="prop-y" type="text" inputmode="numeric" pattern="^\\d+$" aria-describedby="prop-y-err" />
+          <div class="err" id="prop-y-err" role="alert" aria-live="polite"></div>
+
+          <label for="prop-rot">Rotation (°)</label>
+          <input id="prop-rot" type="text" inputmode="numeric" pattern="^-?\\d+$" aria-describedby="prop-rot-err" />
+          <div class="err" id="prop-rot-err" role="alert" aria-live="polite"></div>
+
+          <label for="prop-fill">Fill</label>
+          <input id="prop-fill" type="color" value="#7ec8e3" />
+
+          <label for="prop-stroke">Border</label>
+          <input id="prop-stroke" type="color" value="#144663" />
+
+          <label for="prop-thick">Border thickness (mm)</label>
+          <input id="prop-thick" type="text" inputmode="numeric" pattern="^\\d+$" aria-describedby="prop-thick-err" />
+          <div class="err" id="prop-thick-err" role="alert" aria-live="polite"></div>
+
+          <label for="prop-label-size">Label text size (px)</label>
+          <input id="prop-label-size" type="text" inputmode="numeric" pattern="^\\d+$" aria-describedby="prop-label-size-err" />
+          <div class="err" id="prop-label-size-err" role="alert" aria-live="polite"></div>
+
+          <div class="form-row">
+            <label><input id="prop-label" type="checkbox" checked /> Show label</label>
+          </div>
+
+          <div class="prop-actions">
+            <button id="btn-duplicate" type="button" title="Duplicate">Duplicate</button>
+            <button id="btn-delete" type="button" title="Delete">Delete</button>
+          </div>
+        </div>
+      </form>
+
+      <h2>Export / Import</h2>
+      <div class="export-import">
+        <div class="export-row">
+          <button id="btn-export-json" type="button">Export JSON</button>
+          <input id="import-json-input" type="file" accept="application/json" />
+          <button id="btn-import-json" type="button">Import JSON</button>
+        </div>
+        <div class="err" id="import-json-err" role="alert" aria-live="polite"></div>
+        <fieldset class="jpeg-fieldset">
+          <legend>JPEG export</legend>
+          <label for="jpeg-width">Width (px)</label>
+          <input id="jpeg-width" type="text" inputmode="numeric" pattern="^\\d+$" value="2000" />
+          <div class="form-row">
+            <label><input type="checkbox" id="jpeg-include-grid" checked /> Include grid</label>
+          </div>
+          <div class="form-row">
+            <label><input type="checkbox" id="jpeg-include-labels" checked /> Include labels</label>
+          </div>
+          <button id="btn-export-jpeg" type="button">Export JPEG</button>
+          <div class="err" id="jpeg-err" role="alert" aria-live="polite"></div>
+        </fieldset>
+      </div>
+
+      <details class="user-guide">
+        <summary>User guide</summary>
+        <div id="user-guide-content"></div>
+      </details>
+    </section>
+  </main>
+
+  <footer class="app-footer" role="contentinfo">
+    <small>Runs fully in-browser. No network calls. All measurements stored as integer millimetres.</small>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
