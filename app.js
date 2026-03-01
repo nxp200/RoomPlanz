@@ -115,7 +115,7 @@
   }
 
   function mmToPx(mm, state){ return mm * state.view.scale; }
-  function pxToMm(px, state){ return Math.round(px / state.view.scale); } // round to nearest mm for storage
+  function pxToMm(px, state){ return px / state.view.scale; } // return float mm for smooth interactions; round at assignment as needed
 
   // ---------------------------
   // Application State
@@ -836,8 +836,8 @@
     if (mode === 'drag'){
       const dxMm = pxToMm(dxPx, state);
       const dyMm = pxToMm(dyPx, state);
-      obj.xMm = state.interaction.objStart.xMm + dxMm;
-      obj.yMm = state.interaction.objStart.yMm + dyMm;
+      obj.xMm = Math.round(state.interaction.objStart.xMm + dxMm);
+      obj.yMm = Math.round(state.interaction.objStart.yMm + dyMm);
       if (state.settings.snapToGrid){
         const s = state.settings.gridSpacingMm;
         obj.xMm = Math.round(obj.xMm / s) * s;
