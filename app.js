@@ -12,6 +12,7 @@
   // Constants & Utilities
   // ---------------------------
   const SCHEMA_VERSION = '1.0.0';
+  const AUTOSAVE_KEY = 'roomplanner_autosave_v1';
   const MIN_ROOM_MM = 500;
   const MAX_ROOM_MM = 50000;
   const MIN_SIZE_MM = 1; // Strictly positive
@@ -221,6 +222,8 @@
   // Initialization
   // ---------------------------
   function init(){
+    // Restore any autosaved model before wiring UI so fields reflect it
+    try { loadAutosaveIfAny(); } catch(e) {}
     // set initial UI values
     inputRoomW.value = String(state.room.widthMm);
     inputRoomH.value = String(state.room.heightMm);
@@ -448,6 +451,7 @@
     state.selectionId = id;
     renderAll();
     updatePropsPanel();
+    scheduleAutosave();
   }
 
   function getSelected(){ return state.objects.find(o=>o.id===state.selectionId) || null; }
@@ -590,6 +594,7 @@
 
     renderAll();
     updatePropsPanel();
+    scheduleAutosave();
   }
 
   // ---------------------------
@@ -691,6 +696,7 @@
       ensureInsideRoom(obj, state.room);
     }
     renderAll();
+    scheduleAutosave();
   }
 
   // ---------------------------
@@ -797,10 +803,12 @@
       ensureInsideRoom(obj, state.room);
       renderObjects();
       updatePropsPanel();
+      scheduleAutosave();
     } else if (mode === 'resize'){
       resizeWithPointer(obj, dxPx, dyPx);
       renderObjects();
       updatePropsPanel();
+      scheduleAutosave();
     } else if (mode === 'rotate'){
       const svgPt = svgPointFromClient(e.clientX, e.clientY);
       // object transform: group is translated to (xMm,yMm) then rotated rot
@@ -814,6 +822,7 @@
       ensureInsideRoom(obj, state.room);
       renderObjects();
       updatePropsPanel();
+      scheduleAutosave();
     }
   }
 
@@ -974,7 +983,7 @@
   function deleteSelected(){
     if (!state.selectionId) return;
     const idx = state.objects.findIndex(o=>o.id===state.selectionId);
-    if (idx>=0){ state.objects.splice(idx,1); state.selectionId=null; renderAll(); updatePropsPanel(); }
+    if (idx>=0){ state.objects.splice(idx,1); state.selectionId=null; renderAll(); updatePropsPanel(); scheduleAutosave(); }
   }
   function duplicateSelected(){
     const obj = getSelected(); if (!obj) return;
@@ -983,7 +992,7 @@
     copy.name = (obj.name || `${obj.type} ${obj.id}`) + ' copy';
     copy.xMm = obj.xMm + 200; copy.yMm = obj.yMm + 200;
     clampSizeToRoom(copy, state.room); ensureInsideRoom(copy, state.room);
-    state.objects.push(copy); selectById(copy.id);
+    state.objects.push(copy); selectById(copy.id); scheduleAutosave();
   }
 
   // ---------------------------
@@ -1047,6 +1056,35 @@
     };
   }
 
+  // ---------------------------
+  // Autosave (localStorage)
+  // ---------------------------
+  let autosaveTimer = null;
+  function saveAutosave(){
+    try {
+      const data = currentModel();
+      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(data));
+    } catch(e){ /* ignore quota/privacy errors */ }
+  }
+  function scheduleAutosave(){
+    if (autosaveTimer) clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(saveAutosave, 300);
+  }
+  function loadAutosaveIfAny(){
+    const raw = localStorage.getItem(AUTOSAVE_KEY);
+    if (!raw) return;
+    try {
+      const model = JSON.parse(raw);
+      const errs = validateModel(model);
+      if (errs.length) return;
+      state.room = deepClone(model.room);
+      state.objects = deepClone(model.objects);
+      state.selectionId = null;
+      let maxId = 0; for (const o of state.objects){ if (o.id>maxId) maxId=o.id; }
+      state.nextId = maxId+1;
+    } catch(_) { /* ignore parse errors */ }
+  }
+
   function validateModel(model){
     const errs = [];
     if (!model || model.schemaVersion !== SCHEMA_VERSION){ errs.push('Unsupported or missing schemaVersion.'); }
@@ -1105,7 +1143,7 @@
         // recompute nextId
         let maxId = 0; for (const o of state.objects){ if (o.id>maxId) maxId=o.id; }
         state.nextId = maxId+1;
-        renderAll(); updatePropsPanel(); syncRoomInputs(); fitToRoom();
+        renderAll(); updatePropsPanel(); syncRoomInputs(); fitToRoom(); scheduleAutosave();
       } catch(err){
         importJsonErr.textContent = 'Invalid JSON.';
       }
