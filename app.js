@@ -489,33 +489,36 @@
     noSelNotice.classList.add('hidden');
     propsFields.classList.remove('hidden');
 
-    propName.value = obj.name || '';
-    propType.value = obj.type;
+    // Do not overwrite fields the user is actively editing
+    const setIfNotActive = (el, val)=>{ if (el && document.activeElement !== el) el.value = String(val); };
+
+    setIfNotActive(propName, obj.name || '');
+    if (document.activeElement !== propType) propType.value = obj.type;
 
     if (obj.type === 'circle'){
       $('#dim-rect').classList.add('hidden');
       $('#dim-circle').classList.remove('hidden');
-      propRadius.value = String(obj.radiusMm);
+      setIfNotActive(propRadius, obj.radiusMm);
       // Corner radius not applicable for circles
       $('#corner-rect').classList.add('hidden');
     } else {
       $('#dim-rect').classList.remove('hidden');
       $('#dim-circle').classList.add('hidden');
-      propWidth.value = String(obj.type==='square'?obj.sizeMm:obj.widthMm);
-      propHeight.value = String(obj.type==='square'?obj.sizeMm:obj.heightMm);
+      setIfNotActive(propWidth, obj.type==='square'?obj.sizeMm:obj.widthMm);
+      setIfNotActive(propHeight, obj.type==='square'?obj.sizeMm:obj.heightMm);
       // Show corner radius control for rect/square
       $('#corner-rect').classList.remove('hidden');
-      if (propCorner) propCorner.value = String(Number.isInteger(obj.style?.cornerMm) ? obj.style.cornerMm : 0);
+      if (propCorner) setIfNotActive(propCorner, Number.isInteger(obj.style?.cornerMm) ? obj.style.cornerMm : 0);
     }
 
-    propX.value = String(obj.xMm);
-    propY.value = String(obj.yMm);
-    propRot.value = String(obj.rotationDeg);
-    propFill.value = obj.style.fill;
-    propStroke.value = obj.style.borderColor;
-    propThick.value = String(obj.style.borderMm);
+    setIfNotActive(propX, obj.xMm);
+    setIfNotActive(propY, obj.yMm);
+    setIfNotActive(propRot, obj.rotationDeg);
+    if (document.activeElement !== propFill) propFill.value = obj.style.fill;
+    if (document.activeElement !== propStroke) propStroke.value = obj.style.borderColor;
+    setIfNotActive(propThick, obj.style.borderMm);
     propLabel.checked = !!obj.style.showLabel;
-    propLabelSize.value = String(Number.isInteger(obj.style.labelPx) ? obj.style.labelPx : 16);
+    setIfNotActive(propLabelSize, Number.isInteger(obj.style.labelPx) ? obj.style.labelPx : 16);
   }
 
   function applyPropsChange(){
@@ -653,10 +656,23 @@
     btnAddSquare.addEventListener('click', ()=> addObject('square'));
     btnAddCircle.addEventListener('click', ()=> addObject('circle'));
 
-    // Props form
+    // Props form: avoid applying while a numeric field is cleared; commit when valid or on change/blur
+    const numericInputs = [propWidth, propHeight, propRadius, propX, propY, propRot, propThick, propLabelSize, propCorner].filter(Boolean);
+    const isNumericField = (el)=> numericInputs.includes(el);
     propsForm.addEventListener('input', (e)=>{
-      // Debounced immediate application
+      const el = e.target;
+      if (!(el instanceof HTMLInputElement) && !(el instanceof HTMLSelectElement)) return;
+      if (isNumericField(el)){
+        const val = el.value;
+        // Allow empty or '-' (for rotation) while typing; don't apply yet
+        if (val === '' || val === '-') return;
+      }
       applyPropsChange();
+    });
+    // Commit numeric fields on change and blur
+    numericInputs.forEach(inp => {
+      inp.addEventListener('change', ()=> applyPropsChange());
+      inp.addEventListener('blur', ()=> { if (inp.value !== '' && inp.value !== '-') applyPropsChange(); });
     });
 
     btnDuplicate.addEventListener('click', duplicateSelected);
