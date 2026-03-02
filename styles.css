@@ -32,6 +32,7 @@ body{
 .header-actions{ display:flex; align-items:center; gap:.5rem; }
 .header-actions button{ background:#1f2937; color:var(--text); border:1px solid var(--border); border-radius:6px; padding:.35rem .6rem; cursor:pointer; }
 .header-actions button:hover{ border-color: var(--accent); }
+.header-separator{ width:1px; height:24px; background:var(--border); margin:0 .25rem; }
 .zoom-controls{ display:flex; align-items:center; gap:.4rem; }
 #zoom-level{ min-width: 64px; text-align:center; background:#0b1220; padding:.25rem .5rem; border:1px solid var(--border); border-radius:6px; }
 
@@ -97,10 +98,23 @@ button:focus-visible, input:focus-visible, select:focus-visible{ outline:2px sol
 .create-btn .shape-icon{ flex:0 0 auto; color: var(--accent-2); }
 .create-btn span{ flex:1 1 auto; text-align:left; }
 .create-btn:hover{ border-color: var(--accent); }
+.rotate-room-controls{ display:flex; gap:.5rem; margin-top:.5rem; }
+.rotate-room-btn{ flex:1; background:#1f2937; border:1px solid var(--border); border-radius:6px; padding:.4rem .6rem; cursor:pointer; }
+.rotate-room-btn:hover{ border-color: var(--accent); }
+.z-order-controls{ display:grid; grid-template-columns:1fr 1fr; gap:.5rem; margin-top:.5rem; }
+.z-order-controls button{ font-size:.85rem; padding:.35rem .5rem; }
 .help{ margin-top:1rem; color: var(--muted); font-size:.9rem; }
 .notice{ padding:.5rem; background:#0b1220; border:1px dashed var(--border); border-radius:6px; color: var(--muted); }
 .err{ color: var(--danger); font-size:.85rem; min-height: 1.1em; }
 .hidden{ display:none !important; }
+
+.object-list{ list-style:none; padding:0; margin:.5rem 0 0; }
+.object-list li{ padding:.4rem .5rem; margin:.25rem 0; background:#1f2937; border:1px solid var(--border); border-radius:6px; cursor:grab; display:flex; align-items:center; gap:.5rem; }
+.object-list li:hover{ border-color: var(--accent); background:#252f3f; }
+.object-list li.dragging{ opacity:0.5; cursor:grabbing; }
+.object-list li.drag-over{ border-color: var(--accent); border-style:dashed; }
+.object-list .obj-icon{ width:20px; height:20px; flex:0 0 auto; }
+.object-list .obj-name{ flex:1; font-size:.9rem; }
 
 .center{ position: relative; background: var(--panel-2); overscroll-behavior: none; }
 .canvas-wrapper{ position:absolute; inset:0; overflow:hidden; cursor: grab; touch-action: none; }

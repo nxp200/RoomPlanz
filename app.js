@@ -165,6 +165,8 @@
   const gridSpacingSel = $('#grid-spacing');
   const snapGridChk = $('#snap-grid');
   const snapRotChk = $('#snap-rotation');
+  const btnRotateRoomLeft = $('#btn-rotate-room-left');
+  const btnRotateRoomRight = $('#btn-rotate-room-right');
 
   const btnAddRect = $('#add-rect');
   const btnAddSquare = $('#add-square');
@@ -173,6 +175,7 @@
   const propsForm = $('#props-form');
   const noSelNotice = $('#no-selection');
   const propsFields = $('#props-fields');
+  const objectList = $('#object-list');
   const propName = $('#prop-name');
   const propType = $('#prop-type');
   const propWidth = $('#prop-width');
@@ -199,6 +202,10 @@
 
   const btnDuplicate = $('#btn-duplicate');
   const btnDelete = $('#btn-delete');
+  const btnToFront = $('#btn-to-front');
+  const btnForward = $('#btn-forward');
+  const btnBackward = $('#btn-backward');
+  const btnToBack = $('#btn-to-back');
 
   const btnExportJson = $('#btn-export-json');
   const importJsonInput = $('#import-json-input');
@@ -243,6 +250,7 @@
     updateViewportTransform();
 
     renderAll();
+    updatePropsPanel();
     attachEventListeners();
     injectUserGuide();
 
@@ -470,11 +478,96 @@
     state.selectionId = id;
     renderAll();
     updatePropsPanel();
+    renderObjectList();
     scheduleAutosave();
   }
 
   function getSelected(){ return state.objects.find(o=>o.id===state.selectionId) || null; }
   function selectById(id){ state.selectionId = id; renderAll(); updatePropsPanel(); }
+
+  function renderObjectList(){
+    if (!objectList) return;
+    objectList.innerHTML = '';
+    if (state.objects.length === 0) {
+      objectList.innerHTML = '<li style="cursor:default; background:transparent; border:none; color:var(--muted); font-size:.85rem;">No objects yet</li>';
+      return;
+    }
+    // Render in reverse order: last in array = top of z-order = front
+    const reversed = [...state.objects].reverse();
+    for (const obj of reversed){
+      const li = document.createElement('li');
+      li.setAttribute('data-id', String(obj.id));
+      li.setAttribute('draggable', 'true');
+      
+      // Icon based on type
+      const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      icon.setAttribute('class', 'obj-icon');
+      icon.setAttribute('viewBox', '0 0 20 20');
+      icon.setAttribute('fill', 'none');
+      icon.setAttribute('stroke', 'currentColor');
+      icon.setAttribute('stroke-width', '2');
+      
+      if (obj.type === 'circle'){
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('cx', '10');
+        circle.setAttribute('cy', '10');
+        circle.setAttribute('r', '7');
+        icon.appendChild(circle);
+      } else {
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        if (obj.type === 'square'){
+          rect.setAttribute('x', '3');
+          rect.setAttribute('y', '3');
+          rect.setAttribute('width', '14');
+          rect.setAttribute('height', '14');
+        } else {
+          rect.setAttribute('x', '2');
+          rect.setAttribute('y', '5');
+          rect.setAttribute('width', '16');
+          rect.setAttribute('height', '10');
+        }
+        rect.setAttribute('rx', '1');
+        icon.appendChild(rect);
+      }
+      
+      const name = document.createElement('span');
+      name.className = 'obj-name';
+      name.textContent = obj.name || `${obj.type}#${obj.id}`;
+      
+      li.appendChild(icon);
+      li.appendChild(name);
+      li.addEventListener('click', ()=> selectById(obj.id));
+      
+      // Drag and drop for reordering
+      li.addEventListener('dragstart', (e)=> {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', obj.id);
+        li.classList.add('dragging');
+      });
+      li.addEventListener('dragend', ()=> {
+        li.classList.remove('dragging');
+      });
+      li.addEventListener('dragover', (e)=> {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        li.classList.add('drag-over');
+      });
+      li.addEventListener('dragleave', ()=> {
+        li.classList.remove('drag-over');
+      });
+      li.addEventListener('drop', (e)=> {
+        e.preventDefault();
+        li.classList.remove('drag-over');
+        const draggedId = parseInt(e.dataTransfer.getData('text/plain'), 10);
+        const targetId = obj.id;
+        if (draggedId !== targetId) {
+          reorderObject(draggedId, targetId);
+        }
+      });
+      
+      objectList.appendChild(li);
+    }
+  }
 
   // ---------------------------
   // Properties Panel Binding
@@ -484,6 +577,7 @@
     if (!obj){
       noSelNotice.classList.remove('hidden');
       propsFields.classList.add('hidden');
+      renderObjectList();
       return;
     }
     noSelNotice.classList.add('hidden');
@@ -651,6 +745,10 @@
     snapGridChk.addEventListener('change', ()=>{ state.settings.snapToGrid = !!snapGridChk.checked; scheduleAutosave(); });
     snapRotChk.addEventListener('change', ()=>{ state.settings.snapRotation = !!snapRotChk.checked; scheduleAutosave(); });
 
+    // Room rotation
+    if (btnRotateRoomLeft) btnRotateRoomLeft.addEventListener('click', ()=> rotateRoom(-90));
+    if (btnRotateRoomRight) btnRotateRoomRight.addEventListener('click', ()=> rotateRoom(90));
+
     // Create
     btnAddRect.addEventListener('click', ()=> addObject('rect'));
     btnAddSquare.addEventListener('click', ()=> addObject('square'));
@@ -677,6 +775,12 @@
 
     btnDuplicate.addEventListener('click', duplicateSelected);
     btnDelete.addEventListener('click', deleteSelected);
+
+    // Z-order controls
+    if (btnToFront) btnToFront.addEventListener('click', ()=> moveToFront());
+    if (btnForward) btnForward.addEventListener('click', ()=> moveForward());
+    if (btnBackward) btnBackward.addEventListener('click', ()=> moveBackward());
+    if (btnToBack) btnToBack.addEventListener('click', ()=> moveToBack());
 
     // Object selection and manipulation
     objectLayer.addEventListener('pointerdown', onObjectPointerDown);
@@ -752,6 +856,48 @@
       if (btnCollapseRight) btnCollapseRight.setAttribute('aria-expanded', String(!collapse));
     }
     savePanelState();
+  }
+
+  function rotateRoom(angleDeg){
+    if (!angleDeg) return;
+    
+    // For 90° rotations, swap room dimensions
+    const is90Deg = Math.abs(angleDeg) % 90 === 0 && Math.abs(angleDeg) % 180 !== 0;
+    
+    const oldW = state.room.widthMm;
+    const oldH = state.room.heightMm;
+    const oldCx = oldW / 2;
+    const oldCy = oldH / 2;
+    
+    if (is90Deg) {
+      // Swap room dimensions for 90° or 270° rotations
+      state.room.widthMm = oldH;
+      state.room.heightMm = oldW;
+    }
+    
+    const newCx = state.room.widthMm / 2;
+    const newCy = state.room.heightMm / 2;
+    const rad = (angleDeg * Math.PI) / 180;
+    const cosA = Math.cos(rad);
+    const sinA = Math.sin(rad);
+
+    // Rotate all objects around old room center, then translate to new center
+    for (const obj of state.objects){
+      const dx = obj.xMm - oldCx;
+      const dy = obj.yMm - oldCy;
+      const rotX = dx * cosA - dy * sinA;
+      const rotY = dx * sinA + dy * cosA;
+      obj.xMm = Math.round(newCx + rotX);
+      obj.yMm = Math.round(newCy + rotY);
+      obj.rotationDeg = normalizeDeg(obj.rotationDeg + angleDeg);
+      ensureInsideRoom(obj, state.room);
+    }
+    
+    // Update UI inputs
+    syncRoomInputs();
+    renderAll();
+    updatePropsPanel();
+    scheduleAutosave();
   }
 
   function onRoomInput(){
@@ -849,7 +995,12 @@
     // Start panning only when clicked on empty space
     if (e.target.closest('.obj')) return; // let object handler manage
     e.preventDefault();
-    state.selectionId = state.selectionId; // no change
+    // Deselect when clicking on background
+    if (state.selectionId !== null) {
+      state.selectionId = null;
+      renderAll();
+      updatePropsPanel();
+    }
     state.interaction.mode = 'pan';
     state.interaction.pointerId = e.pointerId;
     state.interaction.start = { x: e.clientX, y: e.clientY };
@@ -1067,18 +1218,72 @@
   }
 
   function deleteSelected(){
-    if (!state.selectionId) return;
-    const idx = state.objects.findIndex(o=>o.id===state.selectionId);
-    if (idx>=0){ state.objects.splice(idx,1); state.selectionId=null; renderAll(); updatePropsPanel(); scheduleAutosave(); }
+    const obj = getSelected(); if (!obj) return;
+    state.objects = state.objects.filter(o=>o.id!==obj.id);
+    state.selectionId = null;
+    renderAll(); updatePropsPanel(); renderObjectList(); scheduleAutosave();
   }
+
   function duplicateSelected(){
     const obj = getSelected(); if (!obj) return;
-    const copy = deepClone(obj);
-    copy.id = state.nextId++;
-    copy.name = (obj.name || `${obj.type} ${obj.id}`) + ' copy';
-    copy.xMm = obj.xMm + 200; copy.yMm = obj.yMm + 200;
-    clampSizeToRoom(copy, state.room); ensureInsideRoom(copy, state.room);
-    state.objects.push(copy); selectById(copy.id); scheduleAutosave();
+    const dup = deepClone(obj);
+    dup.id = state.nextId++;
+    dup.name = (dup.name||'') + ' copy';
+    dup.xMm += 200; dup.yMm += 200;
+    ensureInsideRoom(dup, state.room);
+    state.objects.push(dup);
+    state.selectionId = dup.id;
+    renderAll(); updatePropsPanel(); renderObjectList(); scheduleAutosave();
+  }
+
+  // ---------------------------
+  // Z-order management
+  // ---------------------------
+  function moveToFront(){
+    const obj = getSelected(); if (!obj) return;
+    const idx = state.objects.findIndex(o=>o.id===obj.id);
+    if (idx === -1 || idx === state.objects.length - 1) return;
+    state.objects.splice(idx, 1);
+    state.objects.push(obj);
+    renderAll(); renderObjectList(); scheduleAutosave();
+  }
+
+  function moveForward(){
+    const obj = getSelected(); if (!obj) return;
+    const idx = state.objects.findIndex(o=>o.id===obj.id);
+    if (idx === -1 || idx === state.objects.length - 1) return;
+    [state.objects[idx], state.objects[idx + 1]] = [state.objects[idx + 1], state.objects[idx]];
+    renderAll(); renderObjectList(); scheduleAutosave();
+  }
+
+  function moveBackward(){
+    const obj = getSelected(); if (!obj) return;
+    const idx = state.objects.findIndex(o=>o.id===obj.id);
+    if (idx === -1 || idx === 0) return;
+    [state.objects[idx], state.objects[idx - 1]] = [state.objects[idx - 1], state.objects[idx]];
+    renderAll(); renderObjectList(); scheduleAutosave();
+  }
+
+  function moveToBack(){
+    const obj = getSelected(); if (!obj) return;
+    const idx = state.objects.findIndex(o=>o.id===obj.id);
+    if (idx === -1 || idx === 0) return;
+    state.objects.splice(idx, 1);
+    state.objects.unshift(obj);
+    renderAll(); renderObjectList(); scheduleAutosave();
+  }
+
+  function reorderObject(draggedId, targetId){
+    const draggedIdx = state.objects.findIndex(o=>o.id===draggedId);
+    const targetIdx = state.objects.findIndex(o=>o.id===targetId);
+    if (draggedIdx === -1 || targetIdx === -1) return;
+    
+    const [draggedObj] = state.objects.splice(draggedIdx, 1);
+    // Since list is reversed (front to back), we need to insert at target position
+    // The visual order is reversed, so dragging down in the list = moving back in z-order
+    state.objects.splice(targetIdx, 0, draggedObj);
+    
+    renderAll(); renderObjectList(); scheduleAutosave();
   }
 
   // ---------------------------
