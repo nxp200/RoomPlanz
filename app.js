@@ -777,10 +777,10 @@
     btnDelete.addEventListener('click', deleteSelected);
 
     // Z-order controls
-    if (btnToFront) btnToFront.addEventListener('click', ()=> moveToFront());
-    if (btnForward) btnForward.addEventListener('click', ()=> moveForward());
-    if (btnBackward) btnBackward.addEventListener('click', ()=> moveBackward());
-    if (btnToBack) btnToBack.addEventListener('click', ()=> moveToBack());
+    if (btnToFront) btnToFront.addEventListener('click', (e)=> { e.preventDefault(); moveToFront(); });
+    if (btnForward) btnForward.addEventListener('click', (e)=> { e.preventDefault(); moveForward(); });
+    if (btnBackward) btnBackward.addEventListener('click', (e)=> { e.preventDefault(); moveBackward(); });
+    if (btnToBack) btnToBack.addEventListener('click', (e)=> { e.preventDefault(); moveToBack(); });
 
     // Object selection and manipulation
     objectLayer.addEventListener('pointerdown', onObjectPointerDown);
@@ -995,12 +995,6 @@
     // Start panning only when clicked on empty space
     if (e.target.closest('.obj')) return; // let object handler manage
     e.preventDefault();
-    // Deselect when clicking on background
-    if (state.selectionId !== null) {
-      state.selectionId = null;
-      renderAll();
-      updatePropsPanel();
-    }
     state.interaction.mode = 'pan';
     state.interaction.pointerId = e.pointerId;
     state.interaction.start = { x: e.clientX, y: e.clientY };
@@ -1140,6 +1134,19 @@
   }
 
   function onPointerUp(e){
+    // Deselect on tap/click if we're in pan mode and haven't moved much
+    if (state.interaction.mode === 'pan' && state.interaction.start) {
+      const dx = e.clientX - state.interaction.start.x;
+      const dy = e.clientY - state.interaction.start.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      // If moved less than 5px, treat as a tap to deselect
+      if (dist < 5 && state.selectionId !== null) {
+        state.selectionId = null;
+        renderAll();
+        updatePropsPanel();
+      }
+    }
+    
     if (state.interaction.pointerId){
       try { svgRoot.releasePointerCapture(state.interaction.pointerId); } catch{}
     }
