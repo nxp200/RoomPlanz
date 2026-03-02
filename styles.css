@@ -122,6 +122,11 @@ button:focus-visible, input:focus-visible, select:focus-visible{ outline:2px sol
 #svg-root{ width:100%; height:100%; display:block; background: #0b1220; touch-action: none; }
 
 /* Room rendering */
+.modal-overlay{ position:fixed; inset:0; background: rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; z-index: 1000; }
+.modal{ background:#0b1220; border:1px solid var(--border); border-radius:8px; padding:1rem; width:min(420px, 90vw); box-shadow: 0 8px 32px rgba(0,0,0,0.6); }
+.modal-actions{ display:flex; gap:.5rem; justify-content:flex-end; margin-top:.75rem; }
+button.danger{ border-color: var(--danger); color: var(--danger); }
+button.danger:hover{ background: #2a0f13; border-color: var(--danger); }
 .room-rect{ fill: #0f172a; stroke: var(--room-border); stroke-width: 2; vector-effect: non-scaling-stroke; }
 .grid-line{ stroke: var(--grid); stroke-width: 0.5; shape-rendering: crispEdges; vector-effect: non-scaling-stroke; pointer-events: none; }
 

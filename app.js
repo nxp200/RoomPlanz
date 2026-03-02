@@ -167,6 +167,10 @@
   const snapRotChk = $('#snap-rotation');
   const btnRotateRoomLeft = $('#btn-rotate-room-left');
   const btnRotateRoomRight = $('#btn-rotate-room-right');
+  const btnClearRoom = $('#btn-clear-room');
+  const modalOverlay = $('#modal-overlay');
+  const btnConfirmClear = $('#btn-confirm-clear');
+  const btnCancelClear = $('#btn-cancel-clear');
 
   const btnAddRect = $('#add-rect');
   const btnAddSquare = $('#add-square');
@@ -749,6 +753,20 @@
     if (btnRotateRoomLeft) btnRotateRoomLeft.addEventListener('click', ()=> rotateRoom(-90));
     if (btnRotateRoomRight) btnRotateRoomRight.addEventListener('click', ()=> rotateRoom(90));
 
+    // Clear room modal
+    if (btnClearRoom) btnClearRoom.addEventListener('click', openClearModal);
+    if (btnCancelClear) btnCancelClear.addEventListener('click', closeClearModal);
+    if (modalOverlay) modalOverlay.addEventListener('click', (e)=>{ if (e.target === modalOverlay) closeClearModal(); });
+    if (btnConfirmClear) btnConfirmClear.addEventListener('click', ()=>{
+      state.objects = [];
+      state.selectionId = null;
+      renderAll();
+      updatePropsPanel();
+      renderObjectList();
+      scheduleAutosave();
+      closeClearModal();
+    });
+
     // Create
     btnAddRect.addEventListener('click', ()=> addObject('rect'));
     btnAddSquare.addEventListener('click', ()=> addObject('square'));
@@ -857,6 +875,9 @@
     }
     savePanelState();
   }
+
+  function openClearModal(){ if (modalOverlay) modalOverlay.classList.remove('hidden'); }
+  function closeClearModal(){ if (modalOverlay) modalOverlay.classList.add('hidden'); }
 
   function rotateRoom(angleDeg){
     if (!angleDeg) return;

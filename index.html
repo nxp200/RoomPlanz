@@ -57,6 +57,9 @@
           <button id="btn-rotate-room-left" type="button" class="rotate-room-btn" title="Rotate room 90° left">↺ 90°</button>
           <button id="btn-rotate-room-right" type="button" class="rotate-room-btn" title="Rotate room 90° right">↻ 90°</button>
         </div>
+        <div class="form-row" style="margin-top:.75rem;">
+          <button id="btn-clear-room" type="button" class="danger" title="Remove all objects from this room">Clear room…</button>
+        </div>
       </form>
 
       <h2>Create</h2>
@@ -91,6 +94,28 @@
             <li>Click an object to select. Drag to move. Handles resize/rotate.</li>
           </ul>
         </details>
+      </div>
+      <h2>Export / Import</h2>
+      <div class="export-import">
+        <div class="export-row">
+          <button id="btn-export-json" type="button">Export JSON</button>
+          <button id="btn-import-json" type="button">Import JSON</button>
+          <input id="import-json-input" type="file" accept="application/json" style="display:none;" />
+        </div>
+        <div class="err" id="import-json-err" role="alert" aria-live="polite"></div>
+        <fieldset class="jpeg-fieldset">
+          <legend>JPEG export</legend>
+          <label for="jpeg-width">Width (px)</label>
+          <input id="jpeg-width" type="text" inputmode="numeric" pattern="^\\d+$" value="2000" />
+          <div class="form-row">
+            <label><input type="checkbox" id="jpeg-include-grid" checked /> Include grid</label>
+          </div>
+          <div class="form-row">
+            <label><input type="checkbox" id="jpeg-include-labels" checked /> Include labels</label>
+          </div>
+          <button id="btn-export-jpeg" type="button">Export JPEG</button>
+          <div class="err" id="jpeg-err" role="alert" aria-live="polite"></div>
+        </fieldset>
       </div>
     </section>
     <section id="workspace" class="center" aria-label="Canvas Workspace">
@@ -205,28 +230,7 @@
         </div>
       </form>
 
-      <h2>Export / Import</h2>
-      <div class="export-import">
-        <div class="export-row">
-          <button id="btn-export-json" type="button">Export JSON</button>
-          <button id="btn-import-json" type="button">Import JSON</button>
-          <input id="import-json-input" type="file" accept="application/json" style="display:none;" />
-        </div>
-        <div class="err" id="import-json-err" role="alert" aria-live="polite"></div>
-        <fieldset class="jpeg-fieldset">
-          <legend>JPEG export</legend>
-          <label for="jpeg-width">Width (px)</label>
-          <input id="jpeg-width" type="text" inputmode="numeric" pattern="^\\d+$" value="2000" />
-          <div class="form-row">
-            <label><input type="checkbox" id="jpeg-include-grid" checked /> Include grid</label>
-          </div>
-          <div class="form-row">
-            <label><input type="checkbox" id="jpeg-include-labels" checked /> Include labels</label>
-          </div>
-          <button id="btn-export-jpeg" type="button">Export JPEG</button>
-          <div class="err" id="jpeg-err" role="alert" aria-live="polite"></div>
-        </fieldset>
-      </div>
+      
 
       <details class="user-guide">
         <summary>User guide</summary>
@@ -234,6 +238,18 @@
       </details>
     </section>
   </main>
+
+  <!-- Clear Room Modal -->
+  <div id="modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title-clear">
+    <div class="modal">
+      <h3 id="modal-title-clear" style="margin:0 0 .5rem; font-size:1rem; color: var(--accent-2);">Clear room?</h3>
+      <p style="margin:.25rem 0 .75rem; color: var(--muted);">This will remove all objects from the room. This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button id="btn-confirm-clear" type="button" class="danger">Yes, clear room</button>
+        <button id="btn-cancel-clear" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
 
   <footer class="app-footer" role="contentinfo">
     <small>Runs fully in-browser. No network calls. All measurements stored as integer millimetres.</small>
