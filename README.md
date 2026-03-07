@@ -1,6 +1,6 @@
-# RoomPlanner (Offline, SVG, mm-precise)
+# RoomPlanz (Offline, SVG, mm-precise)
 
-RoomPlanner is a standalone static, browser-based application for designing precise 2D room layouts with millimetre-accurate measurements. It runs fully offline after initial load, uses no backends, and renders with SVG for deterministic geometry.
+RoomPlanz is a standalone static, browser-based application for designing precise 2D room layouts with millimetre-accurate measurements. It runs fully offline after initial load, uses no backends, and renders with SVG for deterministic geometry.
 
 Open `index.html` directly in your browser (Chrome, Edge, Firefox latest). No build step needed.
 
