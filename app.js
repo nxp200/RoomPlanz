@@ -16,7 +16,7 @@
   const MIN_ROOM_MM = 500;
   const MAX_ROOM_MM = 50000;
   const MIN_SIZE_MM = 1; // Strictly positive
-  const DEFAULT_ROOM = { widthMm: 8000, heightMm: 6000 };
+  const DEFAULT_ROOM = { widthMm: 3000, heightMm: 4000 };
   const DEFAULT_STYLE = { fill: '#7ec8e3', borderColor: '#144663', borderMm: 10, showLabel: true, labelPx: 80, cornerMm: 0 };
   const ZOOM_MIN = 0.1; // 10%
   const ZOOM_MAX = 5.0; // 500%
